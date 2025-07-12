@@ -1,4 +1,5 @@
-# Corrected hello.yml
+# Corrected hello.yml file for GitHub Actions
+# This file defines a simple workflow that runs on pushes to the main branch
 
 name: Hello World!
 
