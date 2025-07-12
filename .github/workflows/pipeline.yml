@@ -19,7 +19,7 @@ jobs:
         run: npm run eslint
       - name: Build
         run: npm run build
-      - name: e2e tests
+      - name: e2e tests # Added Cypress e2e tests
         uses: cypress-io/github-action@v5
         with:
           command: npm run test:e2e
