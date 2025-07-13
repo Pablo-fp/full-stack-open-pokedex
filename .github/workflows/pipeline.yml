@@ -27,3 +27,11 @@ jobs:
           wait-on: http://localhost:5000
       - name: Test
         run: npm test
+  deploy:
+    name: Trigger Render deployment
+    needs: [simple_deployment_pipeline] # This ensures the first job must pass
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' # Only deploy from the main branch
+    steps:
+      - name: Trigger deployment
+        run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
