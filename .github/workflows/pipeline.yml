@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  pull_request: # new trigger for pull requests
+  pull_request: # new new trigger for pull requests
     branches: [main]
     types: [opened, synchronize]
 
