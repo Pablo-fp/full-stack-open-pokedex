@@ -34,7 +34,7 @@ jobs:
     name: Trigger Render deployment
     needs: [simple_deployment_pipeline] # This ensures the first job must pass
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' # Only deploy from the main branch
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }} # Only deploy from main branch on push
     steps:
       - name: Trigger deployment
         run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
