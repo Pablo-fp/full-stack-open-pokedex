@@ -4,13 +4,13 @@ on:
   push:
     branches:
       - main
-  pull_request: # new new trigger for pull requests
+  pull_request:
     branches: [main]
     types: [opened, synchronize]
 
 jobs:
   simple_deployment_pipeline:
-    runs-on: ubuntu-latest # Using the current, supported version
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,7 +22,7 @@ jobs:
         run: npm run eslint
       - name: Build
         run: npm run build
-      - name: e2e tests # Added Cypress e2e tests
+      - name: e2e tests
         uses: cypress-io/github-action@v5
         with:
           command: npm run test:e2e
@@ -30,18 +30,23 @@ jobs:
           wait-on: http://localhost:5000
       - name: Test
         run: npm test
+
+  deploy: #independent deployment job
+    needs: simple_deployment_pipeline
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    steps:
       - name: Deploy
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }} # Only deploy from main branch on push
         run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
+
   tag_release:
-    if: ${{ github.event_name == 'push' }}
-    needs: [simple_deployment_pipeline]
+    needs: deploy
     runs-on: ubuntu-20.04
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v4
       - name: Bump version and push tag
-        uses: anothrNick/github-tag-action@1.67.0 # Use the latest version
+        uses: anothrNick/github-tag-action@1.67.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEFAULT_BUMP: patch # This makes it a patch bump (e.g., 1.2.3 -> 1.2.4)
-
+          DEFAULT_BUMP: patch
