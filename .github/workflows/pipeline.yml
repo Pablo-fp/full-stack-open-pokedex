@@ -30,11 +30,18 @@ jobs:
           wait-on: http://localhost:5000
       - name: Test
         run: npm test
-  deploy:
-    name: Trigger Render deployment
-    needs: [simple_deployment_pipeline] # This ensures the first job must pass
-    runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }} # Only deploy from main branch on push
-    steps:
-      - name: Trigger deployment
+      - name: Deploy
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }} # Only deploy from main branch on push
         run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
+  tag_release:
+    if: ${{ github.event_name == 'push' }}
+    needs: [simple_deployment_pipeline]
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bump version and push tag
+        uses: anothrNick/github-tag-action@1.67.0 # Use the latest version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BUMP: patch # This makes it a patch bump (e.g., 1.2.3 -> 1.2.4)
+
