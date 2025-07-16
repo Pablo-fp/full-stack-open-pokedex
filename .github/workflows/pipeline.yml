@@ -31,7 +31,7 @@ jobs:
       - name: Test
         run: npm test
 
-  deploy:
+  deploy: #independent deployment job
     needs: simple_deployment_pipeline
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
