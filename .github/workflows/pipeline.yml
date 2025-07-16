@@ -43,7 +43,7 @@ jobs:
     needs: deploy
     runs-on: ubuntu-20.04
     permissions:
-      contents: write
+      contents: write # to create a tag
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v4
