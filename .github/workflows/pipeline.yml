@@ -45,6 +45,14 @@ jobs:
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v4
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+      - name: Debug git state
+        run: |
+          git status
+          git log -3
       - name: Bump version and push tag
         uses: anothrNick/github-tag-action@1.67.0
         env:
