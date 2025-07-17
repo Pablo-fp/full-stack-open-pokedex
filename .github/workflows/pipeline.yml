@@ -31,35 +31,36 @@ jobs:
       - name: Test
         run: npm test
 
-  deploy: #independent deployment job
+  deploy:
     needs: simple_deployment_pipeline
     runs-on: ubuntu-latest
+    # This job only runs on a push to the main branch
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - name: Deploy
         run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
 
   tag_release:
+    # This job depends on the successful completion of the 'deploy' job
     needs: deploy
-    runs-on: ubuntu-20.04
-    permissions:
-      contents: write # to create a tag
+    runs-on: ubuntu-latest
+    # This job also only runs on a push to the main branch
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
+      # The checkout action is needed to access the repository's code and git history
       - uses: actions/checkout@v4
         with:
+          # Fetches all history for all branches and tags, which is required for the tagging action
           fetch-depth: '0'
-      - name: Configure Git
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-      - name: Debug git state
-        run: |
-          git status
-          git log -3
+
+      # This step uses the specified third-party action to handle versioning
       - name: Bump version and push tag
+        # Using a recent and specific version of the action is a best practice.
         uses: anothrNick/github-tag-action@1.73.0
         env:
-          WITH_V: true
+          # The GITHUB_TOKEN is automatically created by Actions and needs write permissions
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # This sets the default version increment to a patch (e.g., v1.0.0 -> v1.0.1)
           DEFAULT_BUMP: patch
+          # Optional: Use this to test the action without creating a real tag
+          # DRY_RUN: true
