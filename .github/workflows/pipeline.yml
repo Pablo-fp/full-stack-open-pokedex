@@ -37,7 +37,7 @@ jobs:
   deploy:
     needs: simple_deployment_pipeline
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && env.SKIP_RELEASE != 'true' }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
     steps:
       - name: Deploy
         run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
@@ -45,7 +45,7 @@ jobs:
   tag_release:
     needs: deploy
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && env.SKIP_RELEASE != 'true' }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
     steps:
       - uses: actions/checkout@v4
         with:
