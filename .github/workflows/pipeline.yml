@@ -64,3 +64,5 @@ jobs:
           DEFAULT_BUMP: patch
           # Optional: Use this to test the action without creating a real tag
           # DRY_RUN: true
+
+  # test the tag version
