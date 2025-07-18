@@ -37,21 +37,67 @@ jobs:
   deploy:
     needs: simple_deployment_pipeline
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !env.SKIP_RELEASE }}
     steps:
-      - name: Deploy
+      - name: Deploy to Render
         run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
 
   tag_release:
     needs: deploy
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !env.SKIP_RELEASE }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: '0'
       - name: Bump version and push tag
+        id: tag_action # Add an ID to reference the output
         uses: anothrNick/github-tag-action@1.73.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BUMP: patch
+
+  # --- Start of New Notification Job ---
+  notify_on_status:
+    needs: [simple_deployment_pipeline, deploy, tag_release]
+    runs-on: ubuntu-latest
+    # This job will run even if previous jobs fail
+    if: always() && github.event_name == 'push' && !env.SKIP_RELEASE
+    steps:
+      - name: Notify on success
+        # Check the result of the 'tag_release' job which runs last in the happy path
+        if: ${{ needs.tag_release.result == 'success' }}
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+          -d '{
+            "embeds": [{
+              "title": "Deployment Successful ✅",
+              "description": "A new version has been deployed and tagged.",
+              "color": 3066993,
+              "fields": [
+                { "name": "Repository", "value": "${{ github.repository }}", "inline": true },
+                { "name": "New Tag", "value": "${{ needs.tag_release.outputs.new_tag }}", "inline": true }
+              ]
+            }]
+          }' \
+          ${{ secrets.DISCORD_WEBHOOK }}
+
+      - name: Notify on failure
+        # Check the results of all preceding jobs
+        if: ${{ needs.simple_deployment_pipeline.result == 'failure' || needs.deploy.result == 'failure' || needs.tag_release.result == 'failure' }}
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+          -d '{
+            "embeds": [{
+              "title": "Build Failed ❌",
+              "description": "The workflow failed. [Click here to view the run log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "color": 15158332,
+              "fields": [
+                { "name": "Commit", "value": "`${{ github.sha }}`", "inline": true },
+                { "name": "Triggered by", "value": "${{ github.actor }}", "inline": true }
+              ],
+              "author": { "name": "${{ github.repository }}" }
+            }]
+          }' \
+          ${{ secrets.DISCORD_WEBHOOK }}
+  # --- End of New Notification Job ---
