@@ -1,0 +1,25 @@
+name: Health Check
+
+on:
+  # For initial testing, trigger on every push
+  push:
+    branches:
+      - main
+  # Schedule to run once per day at midnight UTC
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the deployed service URL
+        uses: jtalk/url-health-check-action@v4
+        with:
+          # REQUIRED - The URL of your deployed application's health endpoint
+          url: https://your-app-url.herokuapp.com/health
+          # Follow redirects, max 10
+          follow-redirect: false
+          # Fail step if the response code is not 200 OK
+          max-attempts: 3
+          retry-delay: 5s
