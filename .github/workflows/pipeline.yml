@@ -1,8 +1,5 @@
 name: Deployment pipeline
 
-env:
-  SKIP_RELEASE: ${{ contains(join(github.event.commits.*.message, ' '), '#skip') }}
-
 on:
   push:
     branches:
@@ -37,7 +34,8 @@ jobs:
   deploy:
     needs: simple_deployment_pipeline
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !env.SKIP_RELEASE }}
+    # Corrected 'if' condition
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
     steps:
       - name: Deploy to Render
         run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
@@ -45,27 +43,26 @@ jobs:
   tag_release:
     needs: deploy
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !env.SKIP_RELEASE }}
+    # Corrected 'if' condition
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: '0'
       - name: Bump version and push tag
-        id: tag_action # Add an ID to reference the output
+        id: tag_action
         uses: anothrNick/github-tag-action@1.73.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BUMP: patch
 
-  # --- Start of New Notification Job ---
   notify_on_status:
     needs: [simple_deployment_pipeline, deploy, tag_release]
     runs-on: ubuntu-latest
-    # This job will run even if previous jobs fail
-    if: always() && github.event_name == 'push' && !env.SKIP_RELEASE
+    # Corrected 'if' condition and logic
+    if: ${{ always() && github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
     steps:
       - name: Notify on success
-        # Check the result of the 'tag_release' job which runs last in the happy path
         if: ${{ needs.tag_release.result == 'success' }}
         run: |
           curl -X POST -H "Content-Type: application/json" \
@@ -83,7 +80,6 @@ jobs:
           ${{ secrets.DISCORD_WEBHOOK }}
 
       - name: Notify on failure
-        # Check the results of all preceding jobs
         if: ${{ needs.simple_deployment_pipeline.result == 'failure' || needs.deploy.result == 'failure' || needs.tag_release.result == 'failure' }}
         run: |
           curl -X POST -H "Content-Type: application/json" \
@@ -100,4 +96,3 @@ jobs:
             }]
           }' \
           ${{ secrets.DISCORD_WEBHOOK }}
-  # --- End of New Notification Job -----
